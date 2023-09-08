@@ -16,17 +16,50 @@ intents.message_content = True
 client = commands.Bot(command_prefix=".", intents=intents)
 
 class HelpButtons(discord.ui.View):
-    def __init__(self, *, timeout=180):
-        super().__init__(timeout=timeout)
-    @discord.ui.button(label="Button",style=discord.ButtonStyle.gray)
-    @discord.ui.button(label="Button",style=discord.ButtonStyle.gray)
-    @discord.ui.button(label="Button",style=discord.ButtonStyle.gray)
-    async def gray_button(self,button:discord.ui.Button,interaction:discord.Interaction):
-        await interaction.response.edit_message(content=f"This is an edited button response!")
+    def __init__(self):
+        super().__init__()
+
+        # Create buttons with labels
+        button1 = discord.ui.Button(
+            style=discord.ButtonStyle.gray,
+            label="Button 1",
+            custom_id="button1"
+        )
+        button2 = discord.ui.Button(
+            style=discord.ButtonStyle.gray,
+            label="Button 2",
+            custom_id="button2"
+        )
+        button3 = discord.ui.Button(
+            style=discord.ButtonStyle.gray,
+            label="Button 3",
+            custom_id="button3"
+        )
+
+        # Add buttons to the view
+        self.add_item(button1)
+        self.add_item(button2)
+        self.add_item(button3)
+
+    @discord.ui.button(label="Button 1")
+    async def button1(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message(content="This is an edited response for Button 1!")
+
+    @discord.ui.button(label="Button 2")
+    async def button2(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message(content="This is an edited response for Button 2!")
+
+    @discord.ui.button(label="Button 3")
+    async def button3(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message(content="This is an edited response for Button 3!")
 
 @client.command()
 async def button(ctx):
-    await ctx.send("This message has buttons!",view=HelpButtons())
+    await ctx.send("This message has buttons!", view=HelpButtons())
+
+client.run(TOKEN)
+
+
 
 
 # class MyView(discord.ui.View):
