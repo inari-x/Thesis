@@ -1,0 +1,9 @@
+{
+  "max_tokens": 512, 
+  "messages": [
+    {
+      "content": "What is the capital of France? ### Response: ",
+      "role": "user"
+    }
+  ]
+}

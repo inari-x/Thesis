@@ -1,0 +1,10 @@
+codellama-7b.Q4_K_M.gguf
+Miniforge3-MacOSX-arm64.sh
+.env 
+./.env
+./Miniforge3-MacOSX-arm64.sh
+./codellama
+.DS_Store
+
+
+
