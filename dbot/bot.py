@@ -66,6 +66,30 @@ def complete_text(prompt):
         return str(e)
     
 
+def enhance_text(prompt):
+    payload = {
+        "prompt": f"\n\n### Enhance the following:\n{prompt}\n\n### Response:\n",
+            "stop": [
+                "\n",
+                "###"
+            ]
+    }
+
+    try:
+        response = requests.post(llama2_url, json=payload)
+
+        if response.status_code == 200:
+            enhanced_text = response.json().get("choices")[0].get("text")
+            return enhanced_text
+        else:
+            return "Sorry, there was an error with the enhancement."
+        
+    except Exception as e:
+        return str(e)
+    
+
+    
+
 class HelpButtons(discord.ui.View):
     def __init__(self):
         super().__init__()
@@ -119,6 +143,29 @@ class HelpButtons(discord.ui.View):
         await interaction.followup.send(f"Completion:\n {completed_text}", view=HelpButtons())
 
 
+    @discord.ui.button(label="Enhance", style=discord.ButtonStyle.blurple)
+    async def button3(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(content="Please provide the text to enhance.")
+        try:
+            response = await client.wait_for(
+                "message",
+                check=lambda m: m.author == interaction.user and m.channel == interaction.channel,
+                timeout=60.0  # Adjust the timeout as needed
+            )
+        except asyncio.TimeoutError:
+            await interaction.followup.send("Enhancement request timed out.")
+            return
+        
+        text_to_enhance = response.content
+        print(f"Received message: {text_to_enhance} from {response.author}")
+
+        # Call the enhance_text function to get the enhancement
+        enhanced_text = enhance_text(text_to_enhance)
+
+        # Send the enhanced text as a response
+        await interaction.followup.send(f"Enhancement:\n {enhanced_text}", view=HelpButtons())
+
+        
 # @client.event
 # async def on_ready():
 #     await init_request_queue()
