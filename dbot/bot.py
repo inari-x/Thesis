@@ -33,42 +33,38 @@ def translate_text(prompt, source_language, target_language):
     }
 
     try:
-        # Make a POST request to your custom translation endpoint
         response = requests.post(llama2_url, json=payload)
 
-        # Check if the request was successful
         if response.status_code == 200:
-            # Parse and return the translated text from the response
-            # {
-            #     "id": "cmpl-903a5976-f714-4ff1-93fe-16562853634a",
-            #     "object": "text_completion",
-            #     "created": 1694613063,
-            #     "model": "../wizardlm-13b-v1.2.Q5_K_M.gguf",
-            #     "choices": [
-            #         {
-            #             "text": "你好，您如何？",
-            #             "index": 0,
-            #             "logprobs": null,
-            #             "finish_reason": "stop"
-            #         }
-            #     ],
-            #     "usage": {
-            #         "prompt_tokens": 29,
-            #         "completion_tokens": 9,
-            #         "total_tokens": 38
-            #     }
-            # }
-            # get choices -> text
             translated_text = response.json().get("choices")[0].get("text")
-            # translated_text = response.json().get("translated_text")
             return translated_text
         else:
-            # Handle errors or provide an appropriate response
             return "Sorry, there was an error with the translation."
 
     except Exception as e:
-        # Handle exceptions or errors
         return str(e)
+    
+def complete_text(prompt): 
+    payload = {
+        "prompt": f"\n\n### Complete the following:\n{prompt}\n\n### Response:\n",
+            "stop": [
+                "\n",
+                "###"
+            ]
+    }
+
+    try:
+        response = requests.post(llama2_url, json=payload)
+
+        if response.status_code == 200:
+            completed_text = response.json().get("choices")[0].get("text")
+            return completed_text
+        else:
+            return "Sorry, there was an error with the completion."
+        
+    except Exception as e:
+        return str(e)
+    
 
 class HelpButtons(discord.ui.View):
     def __init__(self):
@@ -76,10 +72,7 @@ class HelpButtons(discord.ui.View):
 
     @discord.ui.button(label="Translate", style=discord.ButtonStyle.green)
     async def button1(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Prompt the user for the text to translate
         await interaction.response.send_message(content="Please provide the text to translate formatted as '<source language> <target language> <message>'\nEx: german english how are you?")
-
-        # Wait for a response from the user
         try:
             response = await client.wait_for(
                 "message",
@@ -91,12 +84,8 @@ class HelpButtons(discord.ui.View):
             return
 
         text_to_translate = response.content
-        # TODO - log here the message
         print(f"Received message: {text_to_translate} from {response.author}")
 
-        # example translation request is as formatted:
-        # english german "hello, how are you?"
-        # break up text_to_translate by first word, second word, rest of message into 3 variables
         source_language = text_to_translate.split(" ")[0]
         target_language = text_to_translate.split(" ")[1]
         text_to_translate = " ".join(text_to_translate.split(" ")[2:])
@@ -106,6 +95,28 @@ class HelpButtons(discord.ui.View):
 
         # Send the translated text as a response
         await interaction.followup.send(f"Translation:\n {translated_text}", view=HelpButtons())
+
+    @discord.ui.button(label="Complete", style=discord.ButtonStyle.red)
+    async def button2(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(content="Please provide the text to complete.")
+        try:
+            response = await client.wait_for(
+                "message",
+                check=lambda m: m.author == interaction.user and m.channel == interaction.channel,
+                timeout=60.0  # Adjust the timeout as needed
+            )
+        except asyncio.TimeoutError:
+            await interaction.followup.send("Completion request timed out.")
+            return
+        
+        text_to_complete = response.content
+        print(f"Received message: {text_to_complete} from {response.author}")
+
+        # Call the complete_text function to get the completion
+        completed_text = complete_text(text_to_complete)
+
+        # Send the completed text as a response
+        await interaction.followup.send(f"Completion:\n {completed_text}", view=HelpButtons())
 
 
 # @client.event
