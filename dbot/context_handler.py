@@ -1,11 +1,11 @@
 import json
-import os
+import os #file handling
 
 from pathlib import Path
 
 CONTEXT_DIRECTORY = "./saved-context"
 
-def context_filename(context_id):
+def context_filename(context_id): #context_id is a channel/context is saved by channel
 	ctx_fn = os.path.join(CONTEXT_DIRECTORY, str(context_id) + ".json")
 	return ctx_fn
 
