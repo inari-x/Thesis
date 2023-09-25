@@ -43,10 +43,10 @@ class ConfigBotAIsettings(discord.ui.Modal):
         }
         config_handler.save_config(self.chat_context_id, config)
 
-        await interaction.response.send_message(f"Config updated. System prompt changed from:\n{old_system_prompt}\nto:\n{config['system_prompt']}", ephemeral=True)
+        await interaction.response.send_message(f"Config updated.", ephemeral=True)
 
         if old_system_prompt != config["system_prompt"]:
-            await interaction.channel.send("System prompt changed. Resetting context.", silent=True)
+            await interaction.channel.send("System prompt changed. Resetting context for another config", silent=True)
         
     async def on_error(self, interaction, error):
         logger = logging.getLogger("discord")

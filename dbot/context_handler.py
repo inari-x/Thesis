@@ -1,4 +1,5 @@
 import json
+import config_handler
 import os #file handling
 
 from pathlib import Path
@@ -10,6 +11,7 @@ def context_filename(context_id): #context_id is a channel/context is saved by c
 	return ctx_fn
 
 def load_context(context_id):
+	config = config_handler.get_config(context_id)
 	if Path(context_filename(context_id)).is_file():
 		with open(context_filename(context_id), "r") as f:
 			messages = json.loads(f.read())
@@ -17,7 +19,7 @@ def load_context(context_id):
 		return messages
 
 	messages = [
-		{"role": "system", "content":"You are an AI assistant"}
+		{"role": "system", "content": config["system_prompt"]}
 	]
 	return messages
 
