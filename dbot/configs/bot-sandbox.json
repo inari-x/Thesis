@@ -1,1 +1,1 @@
-{"max_tokens": "500", "complete_max_tokens": "512", "system_prompt": "You are an AI assistant"}
+{"system_prompt": "You are an AI assistant", "max_tokens": 256, "complete_max_tokens": 512}

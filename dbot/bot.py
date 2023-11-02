@@ -44,14 +44,7 @@ class MyClient(discord.Client):
 async def setup_hook(self):
     await self.tree.sync()
 
-
-bot = MyClient()
-
-
 client = commands.Bot(command_prefix=".", intents=intents)
-# tree = app_commands.CommandTree(client)
-
-
 
 llama2_url = "http://127.0.0.1:8000/v1/completions/"
 
@@ -111,7 +104,7 @@ async def complete_text(prompt, context_id):
     try:
         REQUEST_TYPE = "completion"
         response = requests.post(llama2_url, json=payload)
-        await REQUEST_QUEUE_COMPLETION.put(prompt, context_id)
+        await REQUEST_QUEUE_COMPLETION.put((prompt, context_id))
         print(f"Size of REQqueue: {REQUEST_QUEUE_COMPLETION.qsize()}")
 
         if response.status_code == 200:
@@ -149,7 +142,7 @@ async def enhance_text(prompt, context_id):
     try:
         REQUEST_TYPE = "enhancement"
         response = requests.post(llama2_url, json=payload)
-        await REQUEST_QUEUE_ENHANCEMENT.put(prompt, context_id)
+        await REQUEST_QUEUE_ENHANCEMENT.put((prompt, context_id))
         print(f"Size of REQqueue: {REQUEST_QUEUE_ENHANCEMENT.qsize()}")
 
 
@@ -313,7 +306,7 @@ class HelpButtons(discord.ui.View):
         await interaction.followup.send(f"Enhancement:\n {enhanced_text}", view=HelpButtons())
 
 
-@bot.tree.command()
+@client.tree.command()
 async def botconfig(interaction: discord.Interaction):
     context_id = str(interaction.channel)
     await interaction.response.send_modal(ConfigBotAIsettings(context_id))
@@ -349,7 +342,6 @@ async def on_message(message):
     
     await client.process_commands(message)
 
-bot.run(TOKEN)   
 client.run(TOKEN) 
 
 

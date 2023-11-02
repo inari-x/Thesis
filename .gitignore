@@ -6,5 +6,5 @@ Miniforge3-MacOSX-arm64.sh
 ./codellama
 .DS_Store
 
-
-
+dbot/__pycache__/config_handler.cpython-310.pyc
+dbot/__pycache__/**/*

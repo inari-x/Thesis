@@ -15,7 +15,7 @@ def get_config_filename(context_id):
 
 def get_config(context_id):
     if CONFIGS.get(context_id, None):
-        with open(get_config_filename, 'r') as f:
+        with open(os.path.join(CONFIG_DIRECTORY, str(context_id) + ".json"), 'r') as f:
             config = json.loads(f.read())
             CONFIGS[context_id] = config #Update config in memory
             return config
@@ -26,7 +26,7 @@ def get_config(context_id):
     
 def save_config(context_id, config):
     CONFIGS[context_id] = config
-    config_filename = get_config_filename(context_id)
+    config_filename = os.path.join(CONFIG_DIRECTORY, str(context_id) + ".json")
     with open(config_filename, 'w') as f:
         f.write(json.dumps(config))
     
