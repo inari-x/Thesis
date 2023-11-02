@@ -125,13 +125,11 @@ async def complete_text(prompt, context_id):
     except Exception as e:
         return str(e)
 
-    
-
 async def enhance_text(prompt, context_id):
     config = config_handler.get_config(context_id)
     context = context_handler.load_context(context_id)
     payload = {
-        "prompt": f"\n\n### Enhance the following:\n{prompt}\n\n### Response:\n",
+        "prompt": f"\n\n### Summarize the following:\n{prompt}\n\n### Response:\n",
             "stop": [
                 "\n",
                 "###"
@@ -142,20 +140,21 @@ async def enhance_text(prompt, context_id):
     try:
         REQUEST_TYPE = "enhancement"
         response = requests.post(llama2_url, json=payload)
+        await asyncio.sleep(20)  # Add delay here
         await REQUEST_QUEUE_ENHANCEMENT.put((prompt, context_id))
         print(f"Size of REQqueue: {REQUEST_QUEUE_ENHANCEMENT.qsize()}")
-
-
 
         if response.status_code == 200:
             enhanced_text = response.json().get("choices")[0].get("text")
             REQUEST_QUEUE_ENHANCEMENT.task_done()
-            await RESPONSE_QUEUE_ENHANCEMENT.put(response.json())
+            await asyncio.sleep(20)  # Add delay here
+            await RESPONSE_QUEUE_ENHANCEMENT.put(response.json()) # Fix variable name here
             print(f"Size of RESqueue: {RESPONSE_QUEUE_ENHANCEMENT.qsize()}")
 
             context.append({"role": "user", "content": prompt})
-            context.append({"role": "bot", "content": enhance_text})
+            context.append({"role": "bot", "content": enhanced_text}) # Fix variable name here
             context_handler.save_context(context_id, context)
+            # await asyncio.sleep(20)  # Add delay here
             print(f"Size of context: {len(context)}")
 
             return enhanced_text, REQUEST_TYPE
