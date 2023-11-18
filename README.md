@@ -46,3 +46,6 @@ Format message as:
 `<source_language> <target_language> <message>`
 
 EX: german english how are you?
+
+##MULTITREAD (for waiting than more than 10 seconds) --> fix timeout
+### context handler: error
