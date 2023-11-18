@@ -1,3 +1,11 @@
+#--------------------------------------------------------------------------------------------------------------------------
+# Section 1: Imported Libraries and Modules
+#--------------------------------------------------------------------------------------------------------------------------
+
+# Explanation: The script begins by importing necessary libraries and modules,
+# including those for handling Discord interactions, making HTTP requests,
+# and managing configurations.
+
 import os
 import asyncio
 import discord
@@ -11,6 +19,14 @@ from discord import app_commands
 import context_handler
 from dotenv import load_dotenv
 
+
+#--------------------------------------------------------------------------------------------------------------------------
+# Section 2: Global Variables
+#--------------------------------------------------------------------------------------------------------------------------
+
+# Explanation: Global variables are declared to manage various queues
+# for different request types and user context data.
+
 REQUEST_QUEUE_COMPLETION =	asyncio.Queue()
 RESPONSE_QUEUE_COMPLETION = asyncio. Queue()
 REQUEST_QUEUE_TRANSLATION = asyncio.Queue()
@@ -21,6 +37,14 @@ REQUEST_TYPE = ''
 USER_CONTEXT = {}
 # fix later - https://pypi.org/project/hotreload/
 
+
+#--------------------------------------------------------------------------------------------------------------------------
+# Section 3: Token and Intent Configuration
+#--------------------------------------------------------------------------------------------------------------------------
+
+# Explanation: Global variables are declared to manage various queues
+# for different request types and user context data.
+
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 SYSTEM_MESSAGE = "You are an AI assistant" #bot persona
@@ -28,6 +52,13 @@ SYSTEM_MESSAGE = "You are an AI assistant" #bot persona
 intents = discord.Intents.default()
 intents.message_content = True
 
+
+#--------------------------------------------------------------------------------------------------------------------------
+# Section 4: Client Class
+#--------------------------------------------------------------------------------------------------------------------------
+
+# Explanation: A custom client class, "MyClient," is defined to handle bot interactions
+# and sync application commands.
 
 class MyClient(discord.Client):
     def __init__(self):
@@ -40,6 +71,11 @@ async def setup_hook(self):
     await self.tree.sync()
 
 client = commands.Bot(command_prefix=".", intents=intents)
+
+################################################## L L A M A 2 API ENDPOINT ###############################################
+# Explanation: The HTTP server running through python-llama-cpp[server]
+# acts as a liaison between the Python chatbot and the language model.
+# This is accessed over localhost, through port 8000.
 
 llama2_url = "http://127.0.0.1:8000/v1/completions/"
 
@@ -206,6 +242,13 @@ async def init_request_queues():
         queue_worker(REQUEST_QUEUE_SUMMARIZATION, RESPONSE_QUEUE_SUMMARIZATION, summarize_text, "summarization")
     )
 
+#--------------------------------------------------------------------------------------------------------------------------
+# Section 5: Bot Initialization
+#--------------------------------------------------------------------------------------------------------------------------
+
+# Explanation: Upon successful initialization, the bot reads the configured intents
+# and permissions and starts the Discord client, waiting for the first events and messages to be received.
+# The very last line of code is executing the chatbot, which will run until it's quit or an unhandled error occurs.
 
 @client.event
 async def on_ready():

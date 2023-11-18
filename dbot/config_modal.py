@@ -1,10 +1,22 @@
+#----------------------------------------------------------------------------------------------------------------
+# Description: This file contains the ConfigBotAIsettings class, which is a subclass of discord.ui.Modal. This
+# class is used to create a modal that allows the user to change the settings for the AI bot.
+#----------------------------------------------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------------------------------------------
+# Imports
+#----------------------------------------------------------------------------------------------------------------
+
 import config_handler
 import discord
 from discord import ui
 import logging
 
-class ConfigBotAIsettings(discord.ui.Modal):
+#----------------------------------------------------------------------------------------------------------------
+# ConfigBotAIsettings class
+#----------------------------------------------------------------------------------------------------------------
 
+class ConfigBotAIsettings(discord.ui.Modal):
     def __init__(self, context_id):
         super().__init__(title="Channel AI Bot Settings")
         self.chat_context_id = context_id
@@ -33,7 +45,11 @@ class ConfigBotAIsettings(discord.ui.Modal):
         self.add_item(self.complete_max_tokens_field)
         self.add_item(self.system_prompt_field)
 
+#----------------------------------------------------------------------------------------------------------------
+# Methods
+#----------------------------------------------------------------------------------------------------------------
 
+    # This method is called when the user clicks the submit button
     async def on_submit(self, interaction):
         old_system_prompt = self.config["system_prompt"]
         config = {
@@ -47,7 +63,8 @@ class ConfigBotAIsettings(discord.ui.Modal):
 
         if old_system_prompt != config["system_prompt"]:
             await interaction.channel.send("System prompt changed. Resetting context for another config", silent=True)
-        
+    
+    # This method is called when the user clicks the cancel button
     async def on_error(self, interaction, error):
         logger = logging.getLogger("discord")
         error_msg = f"Error in ConfigBotAIsettings.on_submit: {error}"
