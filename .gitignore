@@ -18,3 +18,5 @@ saved-context/**/*
 configs/
 configs/**/*
 
+dbot/__pycache__/
+dbot/__pycache__/**/*
