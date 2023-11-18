@@ -5,12 +5,10 @@ from discord.ext import commands
 from discord import ui
 import requests
 import config_handler
-import logging
 # from config_modal import ConfigBotAIsettings
 from config_modal import ConfigBotAIsettings
 from discord import app_commands
 import context_handler
-from request_queue import init_request_queue, llm_complete_request
 from dotenv import load_dotenv
 
 REQUEST_QUEUE_COMPLETION =	asyncio.Queue()
@@ -48,9 +46,9 @@ client = commands.Bot(command_prefix=".", intents=intents)
 
 llama2_url = "http://127.0.0.1:8000/v1/completions/"
 
-async def translate_text(prompt, source_language, target_language, context_id):
-    config = config_handler.get_config(context_id)
-    context = context_handler.load_context(context_id)
+async def translate_text(prompt, source_language, target_language, user_id):
+    config = config_handler.get_config(user_id)
+    context = context_handler.load_context(user_id)
     payload = {
         "prompt": f"\n\n### Translate the following from {source_language} to {target_language}:\n{prompt}\n\n### Response:\n",
             "stop": [
@@ -65,8 +63,9 @@ async def translate_text(prompt, source_language, target_language, context_id):
         # await REQUEST_QUEUE_TRANSLATION.put((prompt, source_language, target_language))
         # print(f"Translation request: {prompt} from {source_language} to {target_language}")
         response = requests.post(llama2_url, json=payload)
-        await REQUEST_QUEUE_TRANSLATION.put((prompt, source_language, target_language, context_id))
+        await REQUEST_QUEUE_TRANSLATION.put((prompt, source_language, target_language, user_id))
         print(f"Size of REQqueue: {REQUEST_QUEUE_TRANSLATION.qsize()}")
+        print(f"Context: {context}")
         # print(f"Translation size of queue: {REQUEST_QUEUE_TRANSLATION.qsize()}")
 
         if response.status_code == 200:
@@ -77,7 +76,7 @@ async def translate_text(prompt, source_language, target_language, context_id):
 
             context.append({"role": "user", "content": prompt})
             context.append({"role": "bot", "content": translated_text})
-            context_handler.save_context(context_id, context)
+            context_handler.save_context(user_id, context)
             print(f"Size of context: {len(context)}")
 
             # RESPONSE_QUEUE_TRANSLATION = response.json()
@@ -89,9 +88,9 @@ async def translate_text(prompt, source_language, target_language, context_id):
     except Exception as e:
         return str(e)
     
-async def complete_text(prompt, context_id): 
-    config = config_handler.get_config(context_id)
-    context = context_handler.load_context(context_id)
+async def complete_text(prompt, user_id): 
+    config = config_handler.get_config(user_id)
+    context = context_handler.load_context(user_id)
     payload = {
         "prompt": f"\n\n### Complete the following:\n{prompt}\n\n### Response:\n",
             "stop": [
@@ -104,7 +103,9 @@ async def complete_text(prompt, context_id):
     try:
         REQUEST_TYPE = "completion"
         response = requests.post(llama2_url, json=payload)
-        await REQUEST_QUEUE_COMPLETION.put((prompt, context_id))
+        await REQUEST_QUEUE_COMPLETION.put((prompt, user_id))
+        #print the context 
+        print(f"Context: {context}")
         print(f"Size of REQqueue: {REQUEST_QUEUE_COMPLETION.qsize()}")
 
         if response.status_code == 200:
@@ -115,7 +116,7 @@ async def complete_text(prompt, context_id):
 
             context.append({"role": "user", "content": prompt})
             context.append({"role": "bot", "content": completed_text})
-            context_handler.save_context(context_id, context)
+            context_handler.save_context(user_id, context)
             print(f"Size of context: {len(context)}")
 
             return completed_text, REQUEST_TYPE
@@ -125,9 +126,9 @@ async def complete_text(prompt, context_id):
     except Exception as e:
         return str(e)
 
-async def enhance_text(prompt, context_id):
-    config = config_handler.get_config(context_id)
-    context = context_handler.load_context(context_id)
+async def enhance_text(prompt, user_id):
+    config = config_handler.get_config(user_id)
+    context = context_handler.load_context(user_id)
     payload = {
         "prompt": f"\n\n### Summarize the following:\n{prompt}\n\n### Response:\n",
             "stop": [
@@ -141,7 +142,7 @@ async def enhance_text(prompt, context_id):
         REQUEST_TYPE = "enhancement"
         response = requests.post(llama2_url, json=payload)
         await asyncio.sleep(20)  # Add delay here
-        await REQUEST_QUEUE_ENHANCEMENT.put((prompt, context_id))
+        await REQUEST_QUEUE_ENHANCEMENT.put((prompt, user_id))
         print(f"Size of REQqueue: {REQUEST_QUEUE_ENHANCEMENT.qsize()}")
 
         if response.status_code == 200:
@@ -153,7 +154,7 @@ async def enhance_text(prompt, context_id):
 
             context.append({"role": "user", "content": prompt})
             context.append({"role": "bot", "content": enhanced_text}) # Fix variable name here
-            context_handler.save_context(context_id, context)
+            context_handler.save_context(user_id, context)
             # await asyncio.sleep(20)  # Add delay here
             print(f"Size of context: {len(context)}")
 
@@ -230,13 +231,14 @@ class HelpButtons(discord.ui.View):
         print(f"Received message: {text_to_translate} from {response.author}")
 
         context_id = str(response.channel)
+        user_id = str(response.author.id)
 
         source_language = text_to_translate.split(" ")[0]
         target_language = text_to_translate.split(" ")[1]
         text_to_translate = " ".join(text_to_translate.split(" ")[2:])
 
         # Call the translate_text function to get the translation
-        translated_text = await translate_text(text_to_translate, source_language, target_language, context_id)
+        translated_text = await translate_text(text_to_translate, source_language, target_language, user_id)
 
         await RESPONSE_QUEUE_TRANSLATION.get()
         RESPONSE_QUEUE_TRANSLATION.task_done()
@@ -263,9 +265,10 @@ class HelpButtons(discord.ui.View):
         print(f"Received message: {text_to_complete} from {response.author}")
 
         context_id = str(response.channel)
+        user_id = str(response.author.id)
 
         # Call the complete_text function to get the completion
-        completed_text = await complete_text(text_to_complete, context_id)
+        completed_text = await complete_text(text_to_complete, user_id)
 
         await RESPONSE_QUEUE_COMPLETION.get()
         RESPONSE_QUEUE_COMPLETION.task_done()
@@ -293,9 +296,10 @@ class HelpButtons(discord.ui.View):
         print(f"Received message: {text_to_enhance} from {response.author}")
 
         context_id = str(response.channel)
+        user_id = str(response.author.id)
 
         # Call the enhance_text function to get the enhancement
-        enhanced_text = await enhance_text(text_to_enhance, context_id)
+        enhanced_text = await enhance_text(text_to_enhance, user_id)
 
         await RESPONSE_QUEUE_ENHANCEMENT.get()
         RESPONSE_QUEUE_ENHANCEMENT.task_done()
@@ -308,7 +312,8 @@ class HelpButtons(discord.ui.View):
 @client.tree.command()
 async def botconfig(interaction: discord.Interaction):
     context_id = str(interaction.channel)
-    await interaction.response.send_modal(ConfigBotAIsettings(context_id))
+    user_id = str(interaction.author.id)
+    await interaction.response.send_modal(ConfigBotAIsettings(user_id))
 
 
 @client.command()
@@ -321,20 +326,25 @@ async def button(ctx):
 async def on_message(message):
     is_dm = isinstance(message.channel, discord.channel.DMChannel)
     context_id = str(message.channel)
+    user_id = str(message.author.id)
     if is_dm:
+        user_id = str(message.author.id)
         context_id = str(message.author.id)
+    else:
+        user_id = str(message.channel.id)
+        context_id = str(message.channel.id)
 
     if message.author == client.user:
 
         return
     
     # Check if the user is in the user_contexts dictionary
-    if context_id not in USER_CONTEXT:
-        USER_CONTEXT[context_id] = []  # Initialize context data for this user in the channel
+    if user_id not in USER_CONTEXT:
+        USER_CONTEXT[user_id] = []  # Initialize context data for this user in the channel
 
     
     if message.content.startswith("!reset"):
-        reset_result = context_handler.reset_context(context_id)
+        reset_result = context_handler.reset_context(user_id)
         print(f"Reset result: {reset_result}")
         await message.reply(reset_result, mention_author=True)
         return
@@ -364,5 +374,14 @@ client.run(TOKEN)
 
 
 
+
+
+# @client.event
+# async def on_ready():
+#     print("Bot is ready")
+
+# @client.event
+# async def on_message(message):
+#     #Handle message event
 
 
