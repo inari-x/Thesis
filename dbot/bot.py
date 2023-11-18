@@ -15,13 +15,10 @@ REQUEST_QUEUE_COMPLETION =	asyncio.Queue()
 RESPONSE_QUEUE_COMPLETION = asyncio. Queue()
 REQUEST_QUEUE_TRANSLATION = asyncio.Queue()
 RESPONSE_QUEUE_TRANSLATION = asyncio.Queue()
-REQUEST_QUEUE_ENHANCEMENT = asyncio.Queue()
-RESPONSE_QUEUE_ENHANCEMENT = asyncio.Queue()
+REQUEST_QUEUE_SUMMARIZATION = asyncio.Queue()
+RESPONSE_QUEUE_SUMMARIZATION = asyncio.Queue()
 REQUEST_TYPE = ''
-
 USER_CONTEXT = {}
-
-
 # fix later - https://pypi.org/project/hotreload/
 
 load_dotenv()
@@ -46,6 +43,8 @@ client = commands.Bot(command_prefix=".", intents=intents)
 
 llama2_url = "http://127.0.0.1:8000/v1/completions/"
 
+################################################## T R A N S L A T I O N ##################################################
+
 async def translate_text(prompt, source_language, target_language, user_id):
     config = config_handler.get_config(user_id)
     context = context_handler.load_context(user_id)
@@ -57,16 +56,12 @@ async def translate_text(prompt, source_language, target_language, user_id):
             ],
             "max_tokens": config["max_tokens"],
     }
-
     try:
         REQUEST_TYPE = "translation"
-        # await REQUEST_QUEUE_TRANSLATION.put((prompt, source_language, target_language))
-        # print(f"Translation request: {prompt} from {source_language} to {target_language}")
         response = requests.post(llama2_url, json=payload)
         await REQUEST_QUEUE_TRANSLATION.put((prompt, source_language, target_language, user_id))
         print(f"Size of REQqueue: {REQUEST_QUEUE_TRANSLATION.qsize()}")
         print(f"Context: {context}")
-        # print(f"Translation size of queue: {REQUEST_QUEUE_TRANSLATION.qsize()}")
 
         if response.status_code == 200:
             translated_text = response.json().get("choices")[0].get("text")
@@ -79,14 +74,17 @@ async def translate_text(prompt, source_language, target_language, user_id):
             context_handler.save_context(user_id, context)
             print(f"Size of context: {len(context)}")
 
-            # RESPONSE_QUEUE_TRANSLATION = response.json()
-            # print(f"Translation response: {RESPONSE_QUEUE_TRANSLATION}")
             return translated_text, REQUEST_TYPE
         else:
             return "Sorry, there was an error with the translation."
 
     except Exception as e:
         return str(e)
+    finally:
+        #closing session when done
+        response.close()
+
+##`################################################## C O M P L E T I O N ##################################################
     
 async def complete_text(prompt, user_id): 
     config = config_handler.get_config(user_id)
@@ -125,8 +123,13 @@ async def complete_text(prompt, user_id):
         
     except Exception as e:
         return str(e)
+    finally:
+        #closing session when done
+        response.close()
 
-async def enhance_text(prompt, user_id):
+################################################## S U M M A R I Z A T I O N ##################################################
+
+async def summarize_text(prompt, user_id):
     config = config_handler.get_config(user_id)
     context = context_handler.load_context(user_id)
     payload = {
@@ -139,31 +142,35 @@ async def enhance_text(prompt, user_id):
     }
 
     try:
-        REQUEST_TYPE = "enhancement"
-        response = requests.post(llama2_url, json=payload)
-        await asyncio.sleep(20)  # Add delay here
-        await REQUEST_QUEUE_ENHANCEMENT.put((prompt, user_id))
-        print(f"Size of REQqueue: {REQUEST_QUEUE_ENHANCEMENT.qsize()}")
+        REQUEST_TYPE = "sumamrization"
+        response = requests.post(llama2_url, json=payload, timeout=60) #timeout for discord gateway heartbeat
+        await asyncio.sleep(20)  
+        await REQUEST_QUEUE_SUMMARIZATION.put((prompt, user_id))
+        print(f"Size of REQqueue: {REQUEST_QUEUE_SUMMARIZATION.qsize()}")
 
         if response.status_code == 200:
-            enhanced_text = response.json().get("choices")[0].get("text")
-            REQUEST_QUEUE_ENHANCEMENT.task_done()
-            await asyncio.sleep(20)  # Add delay here
-            await RESPONSE_QUEUE_ENHANCEMENT.put(response.json()) # Fix variable name here
-            print(f"Size of RESqueue: {RESPONSE_QUEUE_ENHANCEMENT.qsize()}")
+            summarized_text = response.json().get("choices")[0].get("text")
+            REQUEST_QUEUE_SUMMARIZATION.task_done()
+            await asyncio.sleep(20)  
+            await RESPONSE_QUEUE_SUMMARIZATION.put(response.json()) 
+            print(f"Size of RESqueue: {RESPONSE_QUEUE_SUMMARIZATION.qsize()}")
 
             context.append({"role": "user", "content": prompt})
-            context.append({"role": "bot", "content": enhanced_text}) # Fix variable name here
+            context.append({"role": "bot", "content": summarized_text}) 
             context_handler.save_context(user_id, context)
-            # await asyncio.sleep(20)  # Add delay here
             print(f"Size of context: {len(context)}")
 
-            return enhanced_text, REQUEST_TYPE
+            return summarized_text, REQUEST_TYPE
         else:
-            return "Sorry, there was an error with the enhancement."
+            return "Sorry, there was an error with the summarization."
         
     except Exception as e:
         return str(e)
+    finally: 
+        #closing session when done
+        response.close()
+
+################################################## Q U E U E S ##################################################
     
 async def queue_worker(queue, response_queue, processing_function, REQUEST_TYPE):
     while True:
@@ -184,8 +191,8 @@ async def queue_worker(queue, response_queue, processing_function, REQUEST_TYPE)
             print(f"Processing {REQUEST_TYPE} request:", item)
             print(f"Size of {REQUEST_TYPE} REQqueue: {queue.qsize()}")
 
-        elif(REQUEST_TYPE == "enhancement"):
-            queue = REQUEST_QUEUE_ENHANCEMENT
+        elif(REQUEST_TYPE == "summarization"):
+            queue = REQUEST_QUEUE_SUMMARIZATION
             item = await queue.get()
             if item is None:
                 break
@@ -196,7 +203,7 @@ async def init_request_queues():
     await asyncio.gather(
         queue_worker(REQUEST_QUEUE_COMPLETION, RESPONSE_QUEUE_COMPLETION, complete_text, "completion"),
         queue_worker(REQUEST_QUEUE_TRANSLATION, RESPONSE_QUEUE_TRANSLATION, translate_text, "translation"),
-        queue_worker(REQUEST_QUEUE_ENHANCEMENT, RESPONSE_QUEUE_ENHANCEMENT, enhance_text, "enhancement")
+        queue_worker(REQUEST_QUEUE_SUMMARIZATION, RESPONSE_QUEUE_SUMMARIZATION, summarize_text, "summarization")
     )
 
 
@@ -205,14 +212,17 @@ async def on_ready():
     print("Bot is ready")
     print("Completion:", REQUEST_QUEUE_COMPLETION.qsize())
     print("Translation:", REQUEST_QUEUE_TRANSLATION.qsize())
-    print("Enhancement:", REQUEST_QUEUE_ENHANCEMENT.qsize())
+    print("Summarization:", REQUEST_QUEUE_SUMMARIZATION.qsize())
 
     await init_request_queues()
 
+################################################## C O M M A N D S ##################################################
 
 class HelpButtons(discord.ui.View):
     def __init__(self):
         super().__init__()
+
+################################################## T R A N S L A T I O N ##################################################
     
     @discord.ui.button(label="Translate", style=discord.ButtonStyle.green)
     async def button1(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -248,6 +258,9 @@ class HelpButtons(discord.ui.View):
         await interaction.followup.send(f"Translation:\n {translated_text}", view=HelpButtons())
 
 
+################################################## C O M P L E T I O N ##################################################
+
+
     @discord.ui.button(label="Complete", style=discord.ButtonStyle.red)
     async def button2(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(content="Please provide the text to complete.")
@@ -278,10 +291,11 @@ class HelpButtons(discord.ui.View):
         # Send the completed text as a response
         await interaction.followup.send(f"Completion:\n {completed_text}", view=HelpButtons())
 
+################################################## S U M M A R I Z A T I O N ##################################################
 
-    @discord.ui.button(label="Enhance", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="Summarize", style=discord.ButtonStyle.blurple)
     async def button3(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(content="Please provide the text to enhance.")
+        await interaction.response.send_message(content="Please provide the text to summarize.")
         try:
             response = await client.wait_for(
                 "message",
@@ -289,25 +303,27 @@ class HelpButtons(discord.ui.View):
                 timeout=60.0  # Adjust the timeout as needed
             )
         except asyncio.TimeoutError:
-            await interaction.followup.send("Enhancement request timed out.")
+            await interaction.followup.send("Summarization request timed out.")
             return
         
-        text_to_enhance = response.content
-        print(f"Received message: {text_to_enhance} from {response.author}")
+        text_to_summarize = response.content
+        print(f"Received message: {text_to_summarize} from {response.author}")
 
         context_id = str(response.channel)
         user_id = str(response.author.id)
 
-        # Call the enhance_text function to get the enhancement
-        enhanced_text = await enhance_text(text_to_enhance, user_id)
+        # Call the summarize_textfunction to get the summarize
+        summarized_text = await summarize_text(text_to_summarize, user_id)
 
-        await RESPONSE_QUEUE_ENHANCEMENT.get()
-        RESPONSE_QUEUE_ENHANCEMENT.task_done()
-        print(f"Size of RESqueue: {RESPONSE_QUEUE_ENHANCEMENT.qsize()}")
+        await RESPONSE_QUEUE_SUMMARIZATION.get()
+        RESPONSE_QUEUE_SUMMARIZATION.task_done()
+        print(f"Size of RESqueue: {RESPONSE_QUEUE_SUMMARIZATION.qsize()}")
 
-        # Send the enhanced text as a response
-        await interaction.followup.send(f"Enhancement:\n {enhanced_text}", view=HelpButtons())
+        # Send the summarize text as a response
+        await interaction.followup.send(f"Summarization:\n {summarized_text}", view=HelpButtons())
 
+
+################################################## C O N F I G U R A T I O N ##################################################
 
 @client.tree.command()
 async def botconfig(interaction: discord.Interaction):
