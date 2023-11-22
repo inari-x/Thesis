@@ -16,16 +16,17 @@ from pathlib import Path
 # Constants
 #-------------------------------------------------------------------------------------------------
 
-CONTEXT_DIRECTORY = "./saved-context"
+CONTEXT_DIRECTORY = "saved-context"
 
 #-------------------------------------------------------------------------------------------------  
 # Functions
 #-------------------------------------------------------------------------------------------------
 
 # Returns the filename of the context file for the given user id
-def context_filename(user_id): #context_id is a user/context is saved by user
-	ctx_fn = os.path.join(CONTEXT_DIRECTORY, str(user_id) + ".json")
-	return ctx_fn
+def context_filename(user_id): #context_id is a user/context is saved by user 
+    ctx_fn = os.path.join(os.getcwd(), CONTEXT_DIRECTORY, str(user_id) + ".json") #because of virtual environment os.getcwd()
+    print(ctx_fn)
+    return ctx_fn
 
 import json
 
