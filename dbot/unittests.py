@@ -1,59 +1,134 @@
-import unittest
-from unittest.mock import MagicMock, patch
-from bot import MyClient, complete_text, enhance_text, translate_text
+from pathlib import Path
+import pytest
+import os
+from unittest.mock import patch, MagicMock
+from bot import MyClient, translate_text, complete_text, summarize_text
+from context_handler import load_context, save_context, reset_context, context_filename
 
-class TestMyClient(unittest.IsolatedAsyncioTestCase):
-    def setUp(self):
-        self.client = MyClient()
-        self.client.wait_for = MagicMock()
+user_id = '1128758613062717450' #my user id
 
-    async def test_on_ready(self):
-        with patch('builtins.print') as mock_print:
-            await self.client.on_ready()
+# -------------------------------------------------------------------------------------------------
+# BOT.PY UNIT TESTS
+# -------------------------------------------------------------------------------------------------
 
-        mock_print.assert_called_with("Bot is ready")
+@pytest.mark.asyncio
+async def test_translate_text():
+    # Mock the requests.post function to return a predefined response
+    with patch('bot.requests.post') as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"choices": [{"text": "Translated text"}]}
 
-    async def test_on_message(self):
-        message = MagicMock()
-        message.author = self.client.user
+        # Call function
+        result, request_type = await translate_text("Hello", "en", "fr", user_id)
 
-        with patch.object(self.client, 'process_commands') as mock_process_commands:
-            await self.client.on_message(message)
+        # Check if the function returns the expected result
+        assert result == "Translated text"
+        assert request_type == "translation"
 
-        mock_process_commands.assert_not_called()
+@pytest.mark.asyncio
+async def test_complete_text():
+    # Mock the requests.post function to return a predefined response
+    with patch('bot.requests.post') as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"choices": [{"text": "Completed text"}]}
 
-    async def test_on_message_reset(self):
-        message = MagicMock()
-        message.content = "!reset"
-        message.author = self.client.user
+        # Call function
+        result, request_type = await complete_text("Hello", user_id)
 
-        with patch.object(self.client, 'process_commands') as mock_process_commands:
-            with patch('unittests.context_handler.reset_context') as mock_reset_context:
-                mock_reset_context.return_value = "Reset successful"
-                await self.client.on_message(message)
+        # Check if the function returns the expected result
+        assert result == "Completed text"
+        assert request_type == "completion"
 
-        mock_process_commands.assert_not_called()
-        mock_reset_context.assert_called_with(str(message.channel))
-        message.reply.assert_called_with("Reset successful", mention_author=True)
+@pytest.mark.asyncio
+async def test_summarize_text():
+    # Mock the requests.post function to return a predefined response
+    with patch('bot.requests.post') as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {"choices": [{"text": "Summarized text"}]}
 
-    async def test_complete_text(self):
-        context_id = "test_context"
-        prompt = "Test prompt"
-        expected_completed_text = "Completed text"
+        # Call function
+        result, request_type = await summarize_text("Hello", user_id)
 
-        with self.assertLogs(logger='unittests', level='INFO') as cm:
-            with patch('unittests.requests.post') as mock_post:
-                mock_post.return_value.status_code = 200
-                mock_post.return_value.json.return_value = {"choices": [{"text": expected_completed_text}]}
+        # Check if the function returns the expected result
+        assert result == "Summarized text"
+        assert request_type == "summarization"
 
-                result, request_type = await complete_text(prompt, context_id)
+#command testing
+@pytest.mark.asyncio
+#test !reset, .botconfig, .button
+async def test_reset():
+    # Set up any necessary context or user data
+    messages = [{"role": "user", "content": "Hello"}]
+    
+    # Call the function
+    #delete the file
 
-        self.assertEqual(result, expected_completed_text)
-        self.assertEqual(request_type, "completion")
-        self.assertIn("Size of REQqueue: 1", cm.output)
-        # Add more assertions based on your log messages
+    ### STUCK HERE WITH USER FILE DOES NOT EXIST BUT STILL IS DELETED
+    result = reset_context(user_id)
+    print(result)
+    
+    # Assert that the context file has been deleted
+    assert not Path(context_filename(user_id)).is_file()
 
-    # Add similar tests for translate_text and enhance_text functions
+@pytest.mark.asyncio
+async def test_botconfig():
+    # Set up any necessary context or user data
+    
+    # Call the function
+    context = load_context(user_id)
 
-if __name__ == '__main__':
-    unittest.main()
+    print(context)
+    
+    # Assert that the context is what you expect
+    assert isinstance(context, list)
+
+@pytest.mark.asyncio
+async def test_button():
+    # Set up any necessary context or user data
+    
+    # Call the function
+    context = load_context(user_id)
+
+    print(context)
+    
+    # Assert that the context is what you expect
+    assert isinstance(context, list)
+
+
+
+# -------------------------------------------------------------------------------------------------
+# CONTEXT_HANDLER.PY UNIT TESTS
+# -------------------------------------------------------------------------------------------------
+
+# New test functions for context.handler.py
+
+@pytest.mark.asyncio
+async def test_load_context():
+    # Set up any necessary context or user data
+    
+    # Call the function
+    context = load_context(user_id)
+    
+    # Assert that the context is what you expect
+    assert isinstance(context, list)
+
+@pytest.mark.asyncio
+async def test_save_context():
+    # Set up any necessary context or user data
+    messages = [{"role": "user", "content": "Hello"}]
+    
+    # Call the function
+    save_context(user_id, messages)
+    
+    # Assert that the context file exists and has been saved correctly
+    assert Path(context_filename(user_id)).is_file()
+
+@pytest.mark.asyncio
+async def test_reset_context():
+    # Set up any necessary context or user data
+    
+    # Call the function
+    result = reset_context(user_id)
+    
+    # Assert that the context file has been deleted
+    assert not Path(context_filename(user_id)).is_file()
