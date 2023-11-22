@@ -49,7 +49,7 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 SYSTEM_MESSAGE = "You are an AI assistant" #bot persona
 
-intents = discord.Intents.default()
+intents = discord.Intents.default() 
 intents.message_content = True
 
 
@@ -178,7 +178,7 @@ async def summarize_text(prompt, user_id):
     }
 
     try:
-        REQUEST_TYPE = "sumamrization"
+        REQUEST_TYPE = "summarization"
         response = requests.post(llama2_url, json=payload, timeout=60) #timeout for discord gateway heartbeat
         await asyncio.sleep(20)  
         await REQUEST_QUEUE_SUMMARIZATION.put((prompt, user_id))
