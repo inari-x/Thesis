@@ -48,6 +48,7 @@ USER_CONTEXT = {}
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 SYSTEM_MESSAGE = "You are an AI assistant" #bot persona
+APPLICATION_ID = os.getenv("APPLICATION_ID")
 
 intents = discord.Intents.default() 
 intents.message_content = True
@@ -64,7 +65,7 @@ class MyClient(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
-        super().__init__(intents=intents)
+        super().__init__(intents=intents, application_id = APPLICATION_ID)
         self.tree = app_commands.CommandTree(self)
 
 async def setup_hook(self):
@@ -405,42 +406,12 @@ async def on_message(message):
     if message.content.startswith("!reset"):
         reset_result = context_handler.reset_context(user_id)
         print(f"Reset result: {reset_result}")
-        await message.reply(reset_result, mention_author=True)
+
+        #Avoiding sending an empty message
+        if reset_result:
+            await message.reply(reset_result, mention_author=True)
         return
     
     await client.process_commands(message)
 
 client.run(TOKEN) 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# @client.event
-# async def on_ready():
-#     print("Bot is ready")
-
-# @client.event
-# async def on_message(message):
-#     #Handle message event
-
-

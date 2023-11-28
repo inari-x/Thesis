@@ -25,7 +25,7 @@ CONTEXT_DIRECTORY = "saved-context"
 # Returns the filename of the context file for the given user id
 def context_filename(user_id): #context_id is a user/context is saved by user 
     ctx_fn = os.path.join(os.getcwd(), CONTEXT_DIRECTORY, str(user_id) + ".json") #because of virtual environment os.getcwd()
-    print(ctx_fn)
+    # print(ctx_fn)
     return ctx_fn
 
 import json
@@ -53,9 +53,11 @@ def save_context(user_id, messages):
 
 # Resets the context for the given user id
 def reset_context(user_id):
-	try:
-		os.remove(context_filename(user_id))
-		return "Context Reset"
-	except FileNotFoundError:
-		return "Context file doesn't exist"
+      context_file_path = context_filename(user_id)
+      if Path(context_file_path).is_file():
+        try:
+            os.remove(context_filename(user_id))
+            return "Context Reset"
+        except FileNotFoundError:
+             return "Context file doesn't exist"
 
