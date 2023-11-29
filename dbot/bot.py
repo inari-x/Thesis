@@ -270,7 +270,7 @@ class HelpButtons(discord.ui.View):
     
     @discord.ui.button(label="Translate", style=discord.ButtonStyle.green)
     async def button1(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(content="Please provide the text to translate formatted as '<source language> <target language> <message>'\nEx: german english how are you.")
+        await interaction.response.send_message(content="Please provide the text to translate formatted as '<source language> <target language> <message>'\nEx: english german how are you.")
         try:
             response = await client.wait_for(
                 "message",
