@@ -1,8 +1,9 @@
 from pathlib import Path
 import pytest
 import asyncio
+import time
 from unittest.mock import patch, MagicMock, AsyncMock, Mock
-from bot import REQUEST_QUEUE_COMPLETION, REQUEST_QUEUE_SUMMARIZATION, REQUEST_QUEUE_TRANSLATION, RESPONSE_QUEUE_COMPLETION, RESPONSE_QUEUE_SUMMARIZATION, RESPONSE_QUEUE_TRANSLATION, HelpButtons, MyClient, botconfig, button, init_request_queues, on_message, queue_worker, setup_hook, translate_text, complete_text, summarize_text
+from bot import translate_text, complete_text, summarize_text
 from context_handler import load_context, save_context, reset_context, context_filename
 from config_handler import get_config, save_config
 
@@ -19,12 +20,18 @@ async def test_translate_text():
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"choices": [{"text": "Translated text"}]}
 
+        #ACCESS TIME    
+        start_time = time.time()
         # Call function
         result, request_type = await translate_text("Hello", "en", "fr", user_id)
+        end_time = time.time()
 
         # Check if the function returns the expected result
         assert result == "Translated text"
         assert request_type == "translation"
+
+         # Print access time
+        print(f"Translate Text Access Time: {end_time - start_time} seconds")
 
 @pytest.mark.asyncio
 async def test_complete_text():
@@ -33,12 +40,17 @@ async def test_complete_text():
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"choices": [{"text": "Completed text"}]}
 
+        #ACCESS TIME
+        start_time = time.time()
         # Call function
         result, request_type = await complete_text("Hello I am ", user_id)
+        end_time = time.time()
 
         # Check if the function returns the expected result
         assert result == "Completed text"
         assert request_type == "completion"
+
+        print(f"Complete Text Access Time: {end_time - start_time} seconds")
 
 @pytest.mark.asyncio
 async def test_summarize_text():
@@ -47,12 +59,17 @@ async def test_summarize_text():
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"choices": [{"text": "Summarized text"}]}
 
+        #ACCESS TIME
+        start_time = time.time()
         # Call function
         result, request_type = await summarize_text("Hello my name is Katrin, I am 25 years old", user_id)
+        end_time = time.time()
 
         # Check if the function returns the expected result
         assert result == "Summarized text"
         assert request_type == "summarization"
+
+        print(f"Summarize Text Access Time: {end_time - start_time} seconds")
 
 @pytest.mark.asyncio
 async def test_load_context():

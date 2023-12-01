@@ -104,7 +104,7 @@ async def translate_text(prompt, source_language, target_language, user_id):
             translated_text = response.json().get("choices")[0].get("text")
             REQUEST_QUEUE_TRANSLATION.task_done()
             await RESPONSE_QUEUE_TRANSLATION.put(translated_text)
-            print(f"Size of RESqueue: {RESPONSE_QUEUE_TRANSLATION.qsize()}")
+            print(f"Size o2f RESqueue: {RESPONSE_QUEUE_TRANSLATION.qsize()}")
 
             context.append({"role": "user", "content": prompt})
             context.append({"role": "bot", "content": translated_text})
@@ -372,7 +372,7 @@ class HelpButtons(discord.ui.View):
 @client.tree.command()
 async def botconfig(interaction: discord.Interaction):
     context_id = str(interaction.channel)
-    user_id = str(interaction.author.id)
+    user_id = str(interaction.user.id)
     await interaction.response.send_modal(ConfigBotAIsettings(user_id))
 
 
