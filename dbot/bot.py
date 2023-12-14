@@ -1,49 +1,39 @@
-#--------------------------------------------------------------------------------------------------------------------------
-# Section 1: Imported Libraries and Modules
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# # Section 1: Imported Libraries and Modules
+#------------------------------------------------------------------------------
 
-# Explanation: The script begins by importing necessary libraries and modules,
-# including those for handling Discord interactions, making HTTP requests,
-# and managing configurations.
+# Explanation: The script begins by importing necessary libraries and modules, 
+# including those for handling Discord interactions, making HTTP requests, and 
+# managing configurations.
 
 import os
 import asyncio
-import discord
-from discord.ext import commands 
-from discord import ui
 import requests
+import aiohttp
+import discord
 import config_handler
-# from config_modal import ConfigBotAIsettings
-from config_modal import ConfigBotAIsettings
-from discord import app_commands
 import context_handler
+from discord.ext import commands 
+from discord import ui, app_commands
 from dotenv import load_dotenv
+from config_modal import ConfigBotAIsettings
 
+#------------------------------------------------------------------------------
+# # Section 2: Global Variables
+#------------------------------------------------------------------------------
 
-#--------------------------------------------------------------------------------------------------------------------------
-# Section 2: Global Variables
-#--------------------------------------------------------------------------------------------------------------------------
+# Explanation: Global variables are declared to manage various queues for 
+# different request types and user context data.
 
-# Explanation: Global variables are declared to manage various queues
-# for different request types and user context data.
-
-REQUEST_QUEUE_COMPLETION =	asyncio.Queue()
-RESPONSE_QUEUE_COMPLETION = asyncio. Queue()
-REQUEST_QUEUE_TRANSLATION = asyncio.Queue()
-RESPONSE_QUEUE_TRANSLATION = asyncio.Queue()
-REQUEST_QUEUE_SUMMARIZATION = asyncio.Queue()
-RESPONSE_QUEUE_SUMMARIZATION = asyncio.Queue()
-REQUEST_TYPE = ''
+REQUEST_QUEUE = asyncio.Queue()
 USER_CONTEXT = {}
-# fix later - https://pypi.org/project/hotreload/
 
-
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Section 3: Token and Intent Configuration
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
-# Explanation: Global variables are declared to manage various queues
-# for different request types and user context data.
+# Explanation: Global variables are declared to manage various queues for 
+# different request types and user context data.
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -54,12 +44,12 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Section 4: Client Class
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
-# Explanation: A custom client class, "MyClient," is defined to handle bot interactions
-# and sync application commands.
+# Explanation: A custom client class, "MyClient," is defined to handle bot 
+# interactions and sync application commands.
 
 class MyClient(discord.Client):
     def __init__(self):
@@ -73,18 +63,20 @@ async def setup_hook(self):
 
 client = commands.Bot(command_prefix=".", intents=intents)
 
-################################################## L L A M A 2 API ENDPOINT ###############################################
-# Explanation: The HTTP server running through python-llama-cpp[server]
-# acts as a liaison between the Python chatbot and the language model.
-# This is accessed over localhost, through port 8000.
+############################ LLAMA2 API ENDPOINT ##############################
+# Explanation: The HTTP server running through 
+# python-llama-cpp[server] is the API between the Python 
+# chatbot and the language model. This is accessed through 
+# 127.0.0.1, on port 8000, by default.
 
 llama2_url = "http://127.0.0.1:8000/v1/completions/"
 
-################################################## T R A N S L A T I O N ##################################################
+############################ T R A N S L A T I O N ############################
 
 async def translate_text(prompt, source_language, target_language, user_id):
     config = config_handler.get_config(user_id)
     context = context_handler.load_context(user_id)
+    prompt = prompt.replace("\n", " ") 
     payload = {
         "prompt": f"\n\n### Translate the following from {source_language} to {target_language}:\n{prompt}\n\n### Response:\n",
             "stop": [
@@ -94,26 +86,25 @@ async def translate_text(prompt, source_language, target_language, user_id):
             "max_tokens": config["max_tokens"],
     }
     try:
-        REQUEST_TYPE = "translation"
-        response = requests.post(llama2_url, json=payload)
-        await REQUEST_QUEUE_TRANSLATION.put((prompt, source_language, target_language, user_id))
-        print(f"Size of REQqueue: {REQUEST_QUEUE_TRANSLATION.qsize()}")
-        print(f"Context: {context}")
+        #aiohttp.ClientSession() is used as a context manager - prevent Heartbeat timeout (discord.py)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(llama2_url, json=payload) as response:
+                await REQUEST_QUEUE.put((prompt, source_language, target_language, user_id))
+                print(f"Size of REQqueue: {REQUEST_QUEUE.qsize()}")
+                print(f"Context: {context}")
 
-        if response.status_code == 200:
-            translated_text = response.json().get("choices")[0].get("text")
-            REQUEST_QUEUE_TRANSLATION.task_done()
-            await RESPONSE_QUEUE_TRANSLATION.put(translated_text)
-            print(f"Size o2f RESqueue: {RESPONSE_QUEUE_TRANSLATION.qsize()}")
+                if response.status == 200:
+                    translated_text = (await response.json()).get("choices")[0].get("text")
+                    REQUEST_QUEUE.task_done()
 
-            context.append({"role": "user", "content": prompt})
-            context.append({"role": "bot", "content": translated_text})
-            context_handler.save_context(user_id, context)
-            print(f"Size of context: {len(context)}")
+                    context.append({"role": "user", "content": prompt})
+                    context.append({"role": "bot", "content": translated_text})
+                    context_handler.save_context(user_id, context)
+                    print(f"Size of context: {len(context)}")
 
-            return translated_text, REQUEST_TYPE
-        else:
-            return "Sorry, there was an error with the translation."
+                    return translated_text
+                else:
+                    return "Sorry, there was an error with the translation."
 
     except Exception as e:
         return str(e)
@@ -121,7 +112,7 @@ async def translate_text(prompt, source_language, target_language, user_id):
         #closing session when done
         response.close()
 
-##`################################################## C O M P L E T I O N ##################################################
+############################ C O M P L E T I O N ##############################
     
 async def complete_text(prompt, user_id): 
     config = config_handler.get_config(user_id)
@@ -136,27 +127,24 @@ async def complete_text(prompt, user_id):
     }
 
     try:
-        REQUEST_TYPE = "completion"
-        response = requests.post(llama2_url, json=payload)
-        await REQUEST_QUEUE_COMPLETION.put((prompt, user_id))
-        #print the context 
-        print(f"Context: {context}")
-        print(f"Size of REQqueue: {REQUEST_QUEUE_COMPLETION.qsize()}")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(llama2_url, json=payload, timeout=180) as response:
+                await REQUEST_QUEUE.put((prompt, user_id))
+                print(f"Context: {context}")
+                print(f"Size of REQqueue: {REQUEST_QUEUE.qsize()}")
 
-        if response.status_code == 200:
-            completed_text = response.json().get("choices")[0].get("text")
-            REQUEST_QUEUE_COMPLETION.task_done()
-            await RESPONSE_QUEUE_COMPLETION.put(response.json())
-            print(f"Size of RESqueue: {RESPONSE_QUEUE_COMPLETION.qsize()}")
+                if response.status_code == 200:
+                    completed_text = response.json().get("choices")[0].get("text")
+                    REQUEST_QUEUE.task_done()
 
-            context.append({"role": "user", "content": prompt})
-            context.append({"role": "bot", "content": completed_text})
-            context_handler.save_context(user_id, context)
-            print(f"Size of context: {len(context)}")
+                    context.append({"role": "user", "content": prompt})
+                    context.append({"role": "bot", "content": completed_text})
+                    context_handler.save_context(user_id, context)
+                    print(f"Size of context: {len(context)}")
 
-            return completed_text, REQUEST_TYPE
-        else:
-            return "Sorry, there was an error with the completion."
+                    return completed_text
+                else:
+                    return "Sorry, there was an error with the completion."
         
     except Exception as e:
         return str(e)
@@ -164,7 +152,7 @@ async def complete_text(prompt, user_id):
         #closing session when done
         response.close()
 
-################################################## S U M M A R I Z A T I O N ##################################################
+########################## S U M M A R I Z A T I O N ##########################
 
 async def summarize_text(prompt, user_id):
     config = config_handler.get_config(user_id)
@@ -179,27 +167,25 @@ async def summarize_text(prompt, user_id):
     }
 
     try:
-        REQUEST_TYPE = "summarization"
-        response = requests.post(llama2_url, json=payload, timeout=60) #timeout for discord gateway heartbeat
-        await asyncio.sleep(20)  
-        await REQUEST_QUEUE_SUMMARIZATION.put((prompt, user_id))
-        print(f"Size of REQqueue: {REQUEST_QUEUE_SUMMARIZATION.qsize()}")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(llama2_url, json=payload) as response:
+                await REQUEST_QUEUE.put((prompt, user_id))
+                print(f"Context: {context}")
+                print(f"Size of REQqueue: {REQUEST_QUEUE.qsize()}")
 
-        if response.status_code == 200:
-            summarized_text = response.json().get("choices")[0].get("text")
-            REQUEST_QUEUE_SUMMARIZATION.task_done()
-            await asyncio.sleep(20)  
-            await RESPONSE_QUEUE_SUMMARIZATION.put(response.json()) 
-            print(f"Size of RESqueue: {RESPONSE_QUEUE_SUMMARIZATION.qsize()}")
+                if response.status_code == 200:
+                    summarized_text = response.json().get("choices")[0].get("text")
+                    REQUEST_QUEUE_SUMMARIZATION.task_done()
+                    await asyncio.sleep(20)  
 
-            context.append({"role": "user", "content": prompt})
-            context.append({"role": "bot", "content": summarized_text}) 
-            context_handler.save_context(user_id, context)
-            print(f"Size of context: {len(context)}")
+                    context.append({"role": "user", "content": prompt})
+                    context.append({"role": "bot", "content": summarized_text}) 
+                    context_handler.save_context(user_id, context)
+                    print(f"Size of context: {len(context)}")
 
-            return summarized_text, REQUEST_TYPE
-        else:
-            return "Sorry, there was an error with the summarization."
+                    return summarized_text
+                else:
+                    return "Sorry, there was an error with the summarization."
         
     except Exception as e:
         return str(e)
@@ -207,66 +193,45 @@ async def summarize_text(prompt, user_id):
         #closing session when done
         response.close()
 
-################################################## Q U E U E S ##################################################
-    
-async def queue_worker(queue, response_queue, processing_function, REQUEST_TYPE):
+################################# Q U E U E  #################################
+
+async def queue_worker(queue):
+    #create a queue with the FIFO method
     while True:
-        print(f"Waiting for {REQUEST_TYPE} request...")
-        if(REQUEST_TYPE == "completion"): 
-            queue = REQUEST_QUEUE_COMPLETION
-            item = await queue.get()
-            if item is None:
-                break  # Exit the loop when the queue is empty
-            print(f"Processing {REQUEST_TYPE} request:", item)
-            print(f"Size of {REQUEST_TYPE} REQqueue: {queue.qsize()}")
+        item = await queue.get()
+        if item is None:
+            break
+        print(f"Processing request:", item)
+        print(f"Size of REQqueue: {queue.qsize()}")
 
-        elif(REQUEST_TYPE == "translation"):
-            queue = REQUEST_QUEUE_TRANSLATION
-            item = await queue.get()
-            if item is None:
-                break
-            print(f"Processing {REQUEST_TYPE} request:", item)
-            print(f"Size of {REQUEST_TYPE} REQqueue: {queue.qsize()}")
+async def init_request_queue():
+    # await queue_worker(REQUEST_QUEUE)
+    await asyncio.create_task(queue_worker(REQUEST_QUEUE))
 
-        elif(REQUEST_TYPE == "summarization"):
-            queue = REQUEST_QUEUE_SUMMARIZATION
-            item = await queue.get()
-            if item is None:
-                break
-            print(f"Processing {REQUEST_TYPE} REQrequest:", item)
-        
 
-async def init_request_queues():
-    await asyncio.gather(
-        queue_worker(REQUEST_QUEUE_COMPLETION, RESPONSE_QUEUE_COMPLETION, complete_text, "completion"),
-        queue_worker(REQUEST_QUEUE_TRANSLATION, RESPONSE_QUEUE_TRANSLATION, translate_text, "translation"),
-        queue_worker(REQUEST_QUEUE_SUMMARIZATION, RESPONSE_QUEUE_SUMMARIZATION, summarize_text, "summarization")
-    )
-
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Section 5: Bot Initialization
-#--------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
-# Explanation: Upon successful initialization, the bot reads the configured intents
-# and permissions and starts the Discord client, waiting for the first events and messages to be received.
-# The very last line of code is executing the chatbot, which will run until it's quit or an unhandled error occurs.
+# Explanation: Upon successful initialization, the bot reads the configured 
+# intents and permissions and starts the Discord client, waiting for the first 
+# events and messages to be received. The very last line of code is executing 
+# the chatbot, which will run until it's quit or an unhandled error occurs.
 
 @client.event
 async def on_ready():
     print("Bot is ready")
-    print("Completion:", REQUEST_QUEUE_COMPLETION.qsize())
-    print("Translation:", REQUEST_QUEUE_TRANSLATION.qsize())
-    print("Summarization:", REQUEST_QUEUE_SUMMARIZATION.qsize())
+    print("Queue:", REQUEST_QUEUE.qsize())
 
-    await init_request_queues()
+    await init_request_queue()
 
-################################################## C O M M A N D S ##################################################
+############################## C O M M A N D S ################################
 
-class HelpButtons(discord.ui.View):
-    def __init__(self):
-        super().__init__()
+class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.View
+    def __init__(self): #Constructor Inheritance, initializes an instance of the HelpButtons class
+        super().__init__() #invokes the constructor of the parent class (discord.ui.View)
 
-################################################## T R A N S L A T I O N ##################################################
+############################ T R A N S L A T I O N ############################
     
     @discord.ui.button(label="Translate", style=discord.ButtonStyle.green)
     async def button1(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -284,7 +249,6 @@ class HelpButtons(discord.ui.View):
         text_to_translate = response.content
         print(f"Received message: {text_to_translate} from {response.author}")
 
-        context_id = str(response.channel)
         user_id = str(response.author.id)
 
         source_language = text_to_translate.split(" ")[0]
@@ -294,15 +258,11 @@ class HelpButtons(discord.ui.View):
         # Call the translate_text function to get the translation
         translated_text = await translate_text(text_to_translate, source_language, target_language, user_id)
 
-        await RESPONSE_QUEUE_TRANSLATION.get()
-        RESPONSE_QUEUE_TRANSLATION.task_done()
-        print(f"Size of RESqueue: {RESPONSE_QUEUE_TRANSLATION.qsize()}")
-
         # Send the translated text as a response
         await interaction.followup.send(f"Translation:\n {translated_text}", view=HelpButtons())
 
 
-################################################## C O M P L E T I O N ##################################################
+############################ C O M P L E T I O N ##############################
 
 
     @discord.ui.button(label="Complete", style=discord.ButtonStyle.red)
@@ -321,21 +281,15 @@ class HelpButtons(discord.ui.View):
         text_to_complete = response.content
         print(f"Received message: {text_to_complete} from {response.author}")
 
-        context_id = str(response.channel)
         user_id = str(response.author.id)
 
         # Call the complete_text function to get the completion
         completed_text = await complete_text(text_to_complete, user_id)
 
-        await RESPONSE_QUEUE_COMPLETION.get()
-        RESPONSE_QUEUE_COMPLETION.task_done()
-        print(f"Size of RESqueue: {RESPONSE_QUEUE_COMPLETION.qsize()}")
-
-
         # Send the completed text as a response
         await interaction.followup.send(f"Completion:\n {completed_text}", view=HelpButtons())
 
-################################################## S U M M A R I Z A T I O N ##################################################
+######################### S U M M A R I Z A T I O N ###########################
 
     @discord.ui.button(label="Summarize", style=discord.ButtonStyle.blurple)
     async def button3(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -353,25 +307,19 @@ class HelpButtons(discord.ui.View):
         text_to_summarize = response.content
         print(f"Received message: {text_to_summarize} from {response.author}")
 
-        context_id = str(response.channel)
         user_id = str(response.author.id)
 
         # Call the summarize_textfunction to get the summarize
         summarized_text = await summarize_text(text_to_summarize, user_id)
 
-        await RESPONSE_QUEUE_SUMMARIZATION.get()
-        RESPONSE_QUEUE_SUMMARIZATION.task_done()
-        print(f"Size of RESqueue: {RESPONSE_QUEUE_SUMMARIZATION.qsize()}")
-
         # Send the summarize text as a response
         await interaction.followup.send(f"Summarization:\n {summarized_text}", view=HelpButtons())
 
 
-################################################## C O N F I G U R A T I O N ##################################################
+######################### C O N F I G U R A T I O N ###########################
 
 @client.tree.command()
 async def botconfig(interaction: discord.Interaction):
-    context_id = str(interaction.channel)
     user_id = str(interaction.user.id)
     await interaction.response.send_modal(ConfigBotAIsettings(user_id))
 
@@ -385,17 +333,13 @@ async def button(ctx):
 @client.event 
 async def on_message(message):
     is_dm = isinstance(message.channel, discord.channel.DMChannel)
-    context_id = str(message.channel)
     user_id = str(message.author.id)
     if is_dm:
         user_id = str(message.author.id)
-        context_id = str(message.author.id)
     else:
         user_id = str(message.channel.id)
-        context_id = str(message.channel.id)
 
     if message.author == client.user:
-
         return
     
     # Check if the user is in the user_contexts dictionary
