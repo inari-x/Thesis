@@ -5,13 +5,13 @@ import time
 from unittest.mock import patch, MagicMock, AsyncMock, Mock
 from bot import translate_text, complete_text, summarize_text
 from context_handler import load_context, save_context, reset_context, context_filename
-from config_handler import get_config, save_config
+from config_handler import get_config, save_config # $$$$$$$$$$$$$$$$$$$$$$$$$$$$ never used in this file??
 
 user_id = '1128758613062717450' #my user id
 
-# -------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # BOT.PY UNIT TESTS
-# -------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_translate_text():
@@ -19,9 +19,9 @@ async def test_translate_text():
     with patch('bot.requests.post') as mock_post:
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"choices": [{"text": "Translated text"}]}
-
-        #ACCESS TIME    
+   
         start_time = time.time()
+
         # Call function
         result, request_type = await translate_text("Hello", "en", "fr", user_id)
         end_time = time.time()
@@ -30,7 +30,7 @@ async def test_translate_text():
         assert result == "Translated text"
         assert request_type == "translation"
 
-         # Print access time
+        # Print access time
         print(f"Translate Text Access Time: {end_time - start_time} seconds")
 
 @pytest.mark.asyncio
@@ -40,8 +40,8 @@ async def test_complete_text():
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"choices": [{"text": "Completed text"}]}
 
-        #ACCESS TIME
         start_time = time.time()
+
         # Call function
         result, request_type = await complete_text("Hello I am ", user_id)
         end_time = time.time()
@@ -55,12 +55,12 @@ async def test_complete_text():
 @pytest.mark.asyncio
 async def test_summarize_text():
     # Mock the requests.post function to return a predefined response
-    with patch('bot.requests.post') as mock_post:
+    with patch('bot.quests.post') as mock_post:
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.return_value = {"choices": [{"text": "Summarized text"}]}
 
-        #ACCESS TIME
         start_time = time.time()
+
         # Call function
         result, request_type = await summarize_text("Hello my name is Katrin, I am 25 years old", user_id)
         end_time = time.time()
@@ -70,6 +70,7 @@ async def test_summarize_text():
         assert request_type == "summarization"
 
         print(f"Summarize Text Access Time: {end_time - start_time} seconds")
+
 
 @pytest.mark.asyncio
 async def test_load_context():
@@ -99,7 +100,7 @@ async def test_save_context():
 
 async def test_reset():
     # Set up any necessary context or user data
-    messages = [{"role": "user", "content": "Hello"}]
+    messages = [{"role": "user", "content": "Hello"}] # $$$$$$$$$$$$$$$$$$$$$$$$$$$$ never used in this file??
 
     ### STUCK HERE WITH USER FILE DOES NOT EXIST BUT STILL IS DELETED
     result = reset_context(user_id)

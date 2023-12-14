@@ -1,20 +1,21 @@
-#----------------------------------------------------------------------------------------------------------------
-# Description: This file contains the ConfigBotAIsettings class, which is a subclass of discord.ui.Modal. This
-# class is used to create a modal that allows the user to change the settings for the AI bot.
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Description: This file contains the ConfigBotAIsettings class, which is a 
+# subclass of discord.ui.Modal. This class is used to create a modal that 
+# allows the user to change the settings for the AI bot.
+#------------------------------------------------------------------------------
 
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Imports
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 import config_handler
 import discord
 from discord import ui
 import logging
 
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # ConfigBotAIsettings class
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 class ConfigBotAIsettings(discord.ui.Modal):
     def __init__(self, context_id):
@@ -24,12 +25,12 @@ class ConfigBotAIsettings(discord.ui.Modal):
         
         # Define and initialize the UI elements within the __init__ method
         self.max_tokens_field = discord.ui.TextInput(
-            label="Max Tokens",
+            label="Max Tokens", 
             default=str(self.config["max_tokens"]),
         )
 
         self.complete_max_tokens_field = discord.ui.TextInput(
-            label="Completion Max Tokens",
+            label="Completion Max Tokens", #
             default=str(self.config["complete_max_tokens"]),
         )
 
@@ -45,17 +46,17 @@ class ConfigBotAIsettings(discord.ui.Modal):
         self.add_item(self.complete_max_tokens_field)
         self.add_item(self.system_prompt_field)
 
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Methods
-#----------------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
     # This method is called when the user clicks the submit button
     async def on_submit(self, interaction):
         old_system_prompt = self.config["system_prompt"]
         config = {
-            "max_tokens": self.max_tokens_field.value,
-            "complete_max_tokens": self.complete_max_tokens_field.value,
-            "system_prompt": self.system_prompt_field.value
+            "max_tokens": self.max_tokens_field.value, 
+            "complete_max_tokens": self.complete_max_tokens_field.value, 
+            "system_prompt": self.system_prompt_field.value #system prompt is where the user 
         }
         config_handler.save_config(self.chat_context_id, config)
 
