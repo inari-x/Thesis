@@ -10,6 +10,7 @@
 import json
 import config_handler
 import os #file handling
+import json
 
 from pathlib import Path
 
@@ -28,8 +29,6 @@ def context_filename(user_id): #context_id is a user/context is saved by user
     ctx_fn = os.path.join(os.getcwd(), CONTEXT_DIRECTORY, str(user_id) + ".json") #because of virtual environment os.getcwd()
     # print(ctx_fn)
     return ctx_fn
-
-import json
 
 # Returns the context for the given user id
 def load_context(user_id):

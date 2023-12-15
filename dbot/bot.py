@@ -89,13 +89,10 @@ async def translate_text(prompt, source_language, target_language, user_id):
         #aiohttp.ClientSession() is used as a context manager - prevent Heartbeat timeout (discord.py)
         async with aiohttp.ClientSession() as session:
             async with session.post(llama2_url, json=payload) as response:
-                await REQUEST_QUEUE.put((prompt, source_language, target_language, user_id))
-                print(f"Size of REQqueue: {REQUEST_QUEUE.qsize()}")
-                print(f"Context: {context}")
 
                 if response.status == 200:
                     translated_text = (await response.json()).get("choices")[0].get("text")
-                    REQUEST_QUEUE.task_done()
+                    # REQUEST_QUEUE.task_done()
 
                     context.append({"role": "user", "content": prompt})
                     context.append({"role": "bot", "content": translated_text})
@@ -129,13 +126,9 @@ async def complete_text(prompt, user_id):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(llama2_url, json=payload, timeout=180) as response:
-                await REQUEST_QUEUE.put((prompt, user_id))
-                print(f"Context: {context}")
-                print(f"Size of REQqueue: {REQUEST_QUEUE.qsize()}")
-
+                # print(f"Context: {context}")
                 if response.status_code == 200:
                     completed_text = response.json().get("choices")[0].get("text")
-                    REQUEST_QUEUE.task_done()
 
                     context.append({"role": "user", "content": prompt})
                     context.append({"role": "bot", "content": completed_text})
@@ -169,13 +162,10 @@ async def summarize_text(prompt, user_id):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(llama2_url, json=payload) as response:
-                await REQUEST_QUEUE.put((prompt, user_id))
-                print(f"Context: {context}")
-                print(f"Size of REQqueue: {REQUEST_QUEUE.qsize()}")
+                # print(f"Context: {context}")
 
                 if response.status_code == 200:
                     summarized_text = response.json().get("choices")[0].get("text")
-                    REQUEST_QUEUE_SUMMARIZATION.task_done()
                     await asyncio.sleep(20)  
 
                     context.append({"role": "user", "content": prompt})
@@ -193,21 +183,6 @@ async def summarize_text(prompt, user_id):
         #closing session when done
         response.close()
 
-################################# Q U E U E  #################################
-
-async def queue_worker(queue):
-    #create a queue with the FIFO method
-    while True:
-        item = await queue.get()
-        if item is None:
-            break
-        print(f"Processing request:", item)
-        print(f"Size of REQqueue: {queue.qsize()}")
-
-async def init_request_queue():
-    # await queue_worker(REQUEST_QUEUE)
-    await asyncio.create_task(queue_worker(REQUEST_QUEUE))
-
 
 #------------------------------------------------------------------------------
 # Section 5: Bot Initialization
@@ -221,9 +196,6 @@ async def init_request_queue():
 @client.event
 async def on_ready():
     print("Bot is ready")
-    print("Queue:", REQUEST_QUEUE.qsize())
-
-    await init_request_queue()
 
 ############################## C O M M A N D S ################################
 
@@ -240,7 +212,7 @@ class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.
             response = await client.wait_for(
                 "message",
                 check=lambda m: m.author == interaction.user and m.channel == interaction.channel,
-                timeout=60.0  # Adjust the timeout as needed
+                # timeout=60.0  # Adjust the timeout as needed
             )
         except asyncio.TimeoutError:
             await interaction.followup.send("Translation request timed out.")
@@ -272,7 +244,7 @@ class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.
             response = await client.wait_for(
                 "message",
                 check=lambda m: m.author == interaction.user and m.channel == interaction.channel,
-                timeout=60.0  # Adjust the timeout as needed
+                # timeout=60.0  # Adjust the timeout as needed
             )
         except asyncio.TimeoutError:
             await interaction.followup.send("Completion request timed out.")
@@ -298,7 +270,7 @@ class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.
             response = await client.wait_for(
                 "message",
                 check=lambda m: m.author == interaction.user and m.channel == interaction.channel,
-                timeout=60.0  # Adjust the timeout as needed
+                # timeout=60.0  # Adjust the timeout as needed
             )
         except asyncio.TimeoutError:
             await interaction.followup.send("Summarization request timed out.")
@@ -334,11 +306,6 @@ async def button(ctx):
 async def on_message(message):
     is_dm = isinstance(message.channel, discord.channel.DMChannel)
     user_id = str(message.author.id)
-    if is_dm:
-        user_id = str(message.author.id)
-    else:
-        user_id = str(message.channel.id)
-
     if message.author == client.user:
         return
     
@@ -349,6 +316,7 @@ async def on_message(message):
     
     if message.content.startswith("!reset"):
         reset_result = context_handler.reset_context(user_id)
+        print(f"userID: {user_id}")
         print(f"Reset result: {reset_result}")
 
         #Avoiding sending an empty message
