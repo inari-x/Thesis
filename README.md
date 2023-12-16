@@ -64,7 +64,7 @@ Format message as:
 
 ## Known Bugs
 
-japanese translation in a queue
+japanese translation
 
 ## Feature Roadmap
 

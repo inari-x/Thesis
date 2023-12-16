@@ -25,17 +25,17 @@ class ConfigBotAIsettings(discord.ui.Modal):
         
         # Define and initialize the UI elements within the __init__ method
         self.max_tokens_field = discord.ui.TextInput(
-            label="Max Tokens", 
+            label="Max Tokens",
             default=str(self.config["max_tokens"]),
         )
 
         self.complete_max_tokens_field = discord.ui.TextInput(
-            label="Completion Max Tokens", #
+            label="Completion Max Tokens", #Comp
             default=str(self.config["complete_max_tokens"]),
         )
 
         self.system_prompt_field = discord.ui.TextInput(
-            label="System Prompt",
+            label="System Prompt", 
             style=discord.TextStyle.long,
             default=self.config["system_prompt"],
             max_length=1000
@@ -56,7 +56,7 @@ class ConfigBotAIsettings(discord.ui.Modal):
         config = {
             "max_tokens": self.max_tokens_field.value, 
             "complete_max_tokens": self.complete_max_tokens_field.value, 
-            "system_prompt": self.system_prompt_field.value #system prompt is where the user 
+            "system_prompt": self.system_prompt_field.value 
         }
         config_handler.save_config(self.chat_context_id, config)
 

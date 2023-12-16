@@ -22,10 +22,7 @@ from config_modal import ConfigBotAIsettings
 # # Section 2: Global Variables
 #------------------------------------------------------------------------------
 
-# Explanation: Global variables are declared to manage various queues for 
-# different request types and user context data.
-
-REQUEST_QUEUE = asyncio.Queue()
+# Explanation: Global variables are declared to manage user context data.
 USER_CONTEXT = {}
 
 #------------------------------------------------------------------------------
@@ -294,7 +291,6 @@ class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.
 async def botconfig(interaction: discord.Interaction):
     user_id = str(interaction.user.id)
     await interaction.response.send_modal(ConfigBotAIsettings(user_id))
-
 
 @client.command()
 async def button(ctx):
