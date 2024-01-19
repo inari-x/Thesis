@@ -8,7 +8,6 @@
 
 import os
 import asyncio
-import requests
 import aiohttp
 import discord
 import config_handler
@@ -124,8 +123,8 @@ async def complete_text(prompt, user_id):
         async with aiohttp.ClientSession() as session:
             async with session.post(llama2_url, json=payload, timeout=180) as response:
                 # print(f"Context: {context}")
-                if response.status_code == 200:
-                    completed_text = response.json().get("choices")[0].get("text")
+                if response.status == 200:
+                    completed_text = (await response.json()).get("choices")[0].get("text")
 
                     context.append({"role": "user", "content": prompt})
                     context.append({"role": "bot", "content": completed_text})
@@ -161,8 +160,8 @@ async def summarize_text(prompt, user_id):
             async with session.post(llama2_url, json=payload) as response:
                 # print(f"Context: {context}")
 
-                if response.status_code == 200:
-                    summarized_text = response.json().get("choices")[0].get("text")
+                if response.status == 200:
+                    summarized_text = (await response.json()).get("choices")[0].get("text")
                     await asyncio.sleep(20)  
 
                     context.append({"role": "user", "content": prompt})
