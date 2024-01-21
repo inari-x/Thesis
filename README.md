@@ -1,18 +1,18 @@
 # @inari/thesis/dbot
 
 This Discord bot is desinged to assist users with various language processing tasks. Developed
-as part of a thesis project, the bot leverages the Discord.py library and Meta's powerful
-language model LLaMA2 to provide translation, completion and summarization services. 
+as part of a thesis project, the bot leverages the discord.py library and Meta's powerful
+Large Language Model Llama 2 to provide translation, completion and summarization services. 
 
-## Requirements & Dependencies
+### Requirements & Dependencies
 
-* Python (Discord.py, python-dotenv, openai)
+* Python (discord.py, python-dotenv, openai)
 * Windows with Ubuntu WSL (python3-virtualenv, python3-pip, curl, jq)
 * CPU/GPU support (Follow according NVIDIA/AMD guides off-site, NVIDIA GPU reccommended)
 
-## Installation Instructions
+### Installation Instructions
 
-1. Clone the repository. For Windows users, set up a subsystem for Linux (WSL) 
+1. Clone the repository. For Windows users, set up a subsystem for Linux (WSL2+) 
     and clone the repository within.
 2. Run `sudo apt-get install python3-virtualenv python3-pip curl jq`.
 3. Navigate to the `./Thesis/dbot` folder, set up a virtual environment, and execute 
@@ -23,7 +23,7 @@ language model LLaMA2 to provide translation, completion and summarization servi
 
 The language model runs locally in the WSL system (`\\wsl.localhost\Ubuntu` via Explorer is the root to WSL).
 
-## Start the model
+### Start the model
 
 Naviagate the folder it is located in, execute `/foo/bin/activate` and run:
 
@@ -34,19 +34,19 @@ Naviagate the folder it is located in, execute `/foo/bin/activate` and run:
 
 Replace with the location and name of your `.gguf` file.
 
-## Start the Discord bot
+### Start the Discord bot
 
 From the root, run `python3 bot.py`.
 
-## Bot Commands
-### Translate
+### Bot Commands
+## Translate
 Format message as:
 
 `<source_language> <target_language> <message>`
 
 EX: `german english how are you?`
 
-### Summarize
+## Summarize
 Format message as:
 
 `<message>`
@@ -55,16 +55,54 @@ EX: `In the vast expanse of the cosmos, where galaxies twirl in an eternal dance
 Traveling through the interstellar highways, comets and asteroids journey through the darkness, remnants of the early solar system's chaotic ballet. Their trajectories, a testament to the intricate gravitational choreography that shaped our cosmic neighborhood over eons of time.`
 
 
-### Complete
+## Complete
 Format message as:
 
 `<message>`
 
 `I am currently working in `
 
-## Known Bugs
+### Button accesiblity
+## !button
+There are three main button functions implemented. To access those funcitons use !buttons in the 
+channel where the bot is implemented. The bot is going to answer with displaying three option 
+buttons (Tranlsation, Summarization and Completions). Chose which function you want to use. 
 
-japanese translation
+## !reset
+The reset function is going to reset the saved context for the user. Resetting the context 
+provides a clean state for the user. 
 
-## Feature Roadmap
+## /botconfig
+botconfig represents a category of commands dedicated to configuring the chatbot's settings. 
+Users can customize the max_tokens (the maximum number of tokens the chatbot will use to generate 
+a response. The longer the given text, the longer the waiting time for a response), complete_max_tokens (the maximum number of tokens the completion endpoint will return), and system_prompt (system prompt serves as the introduction or context-setting for the chatbot). These configuration settings empower users to personalize their experience, adding a layer of flexibility to the chatbot's functionality.
+
+### Known Bugs
+
+japanese translation does not function very well. 
+
+### References
+## Academic Papers
+- Luo, Z., Xu, C., Zhao, P., Sun, Q.: WizardCoder: Empowering Code Large Language Models with Evol-Instruct, https://arxiv.org/pdf/2306.08568.pdf, (2023). https://doi.org/10.48550/arXiv.2306.08568. [25] (in thesis bibliography)
+- Touvron, H., Martin, L., Stone, K., & Albert, P. (2023). "Llama 2: Open Foundation and Fine-Tuned Chat Models." [30] (in thesis bibliography)
+- Ye, Q., Axmed, M., Pryzant, R., Khani, F.: Prompt Engineering a Prompt Engineer, https://arxiv.org/pdf/2311.05661.pdf, (2023).
+
+
+## Libraries Used
+- `discord.py`: [Documentation](https://discordpy.readthedocs.io/)
+- `python-dotenv`: [GitHub Repository](https://github.com/theskumar/python-dotenv)
+- `openai`: [OpenAI API Documentation](https://beta.openai.com/docs/)
+- `llama-cpp-python`: [GitHub Repository](https://github.com/openai/llama-cpp-python)
+- `Hugging Face Transformers`: [Hugging Face Transformers Documentation](https://huggingface.co/transformers/)
+
+--> more in requirements.txt
+
+## Guides
+- NVIDIA GPU Installation Guide: [NVIDIA Guide](https://developer.nvidia.com/cuda-downloads)
+- AMD GPU Installation Guide: [AMD Guide](https://www.amd.com/en/support)
+- WSL Installation: [Microsoft WSL Documentation](https://docs.microsoft.com/en-us/windows/wsl/install)
+- Janek. "How to run a llama, alpaca, vicuna REST API for AI Discord bot",  https://www.youtube.com/@panjanek667, (2023).
+- Janek. "Llama.cpp + CUDA",  https://www.youtube.com/@panjanek667, (2023)
+
+
 
