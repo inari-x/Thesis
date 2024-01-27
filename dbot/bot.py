@@ -6,16 +6,16 @@
 # including those for handling Discord interactions, making HTTP requests, and 
 # managing configurations.
 
-import os
-import asyncio
-import aiohttp
+import os 
+import asyncio 
+import aiohttp 
 import discord
 import config_handler
-import context_handler
-from discord.ext import commands 
-from discord import ui, app_commands
+import context_handler 
+from discord.ext import commands  
+from discord import app_commands
 from dotenv import load_dotenv
-from config_modal import ConfigBotAIsettings
+from config_modal import ConfigBotAIsettings 
 
 #------------------------------------------------------------------------------
 # # Section 2: Global Variables
@@ -31,14 +31,14 @@ USER_CONTEXT = {}
 # Explanation: Global variables are declared to manage various queues for 
 # different request types and user context data.
 
-load_dotenv()
-TOKEN = os.getenv("TOKEN")
+load_dotenv() #environment variables .env file
+TOKEN = os.getenv("TOKEN") #bot token
 SYSTEM_MESSAGE = "You are an AI assistant" #bot persona
-APPLICATION_ID = os.getenv("APPLICATION_ID")
+APPLICATION_ID = os.getenv("APPLICATION_ID") #Discord Developer Portal
 
-intents = discord.Intents.default() 
-intents.message_content = True
-
+# #discord.py:which events are sent to the bot
+intents = discord.Intents.default()  
+intents.message_content = True 
 
 #------------------------------------------------------------------------------
 # Section 4: Client Class
@@ -48,12 +48,12 @@ intents.message_content = True
 # interactions and sync application commands.
 
 class MyClient(discord.Client):
-    def __init__(self):
-        intents = discord.Intents.default()
-        intents.message_content = True
+    def __init__(self, intents):
         super().__init__(intents=intents, application_id = APPLICATION_ID)
-        self.tree = app_commands.CommandTree(self)
+        #discord.py:sync application commands
+        self.tree = app_commands.CommandTree(self) 
 
+#discord.py:sync application commands
 async def setup_hook(self):
     await self.tree.sync()
 
@@ -72,7 +72,7 @@ llama2_url = "http://127.0.0.1:8000/v1/completions/"
 async def translate_text(prompt, source_language, target_language, user_id):
     config = config_handler.get_config(user_id)
     context = context_handler.load_context(user_id)
-    prompt = prompt.replace("\n", " ") 
+    prompt = prompt.replace("\n", " ") #replace new line with space for formatting
     payload = {
         "prompt": f"\n\n### Translate the following from {source_language} to {target_language}:\n{prompt}\n\n### Response:\n",
             "stop": [
@@ -82,19 +82,15 @@ async def translate_text(prompt, source_language, target_language, user_id):
             "max_tokens": config["max_tokens"],
     }
     try:
-        #aiohttp.ClientSession() is used as a context manager - prevent Heartbeat timeout (discord.py)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(llama2_url, json=payload) as response:
-
-                if response.status == 200:
+        #aiohttp.ClientSession() is used as a context manager - prevent Heartbeat timeout (discord.py), (aiohttp)
+        async with aiohttp.ClientSession() as session: 
+            async with session.post(llama2_url, json=payload) as response: 
+                if response.status == 200:                  
                     translated_text = (await response.json()).get("choices")[0].get("text")
-                    # REQUEST_QUEUE.task_done()
-
                     context.append({"role": "user", "content": prompt})
                     context.append({"role": "bot", "content": translated_text})
                     context_handler.save_context(user_id, context)
                     print(f"Size of context: {len(context)}")
-
                     return translated_text
                 else:
                     return "Sorry, there was an error with the translation."
@@ -202,26 +198,26 @@ class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.
 ############################ T R A N S L A T I O N ############################
     
     @discord.ui.button(label="Translate", style=discord.ButtonStyle.green)
-    async def button1(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def button1(self, interaction: discord.Interaction, button: discord.ui.Button): #(discord.py)
         await interaction.response.send_message(content="Please provide the text to translate formatted as '<source language> <target language> <message>'\nEx: english german how are you.")
         try:
             response = await client.wait_for(
                 "message",
-                check=lambda m: m.author == interaction.user and m.channel == interaction.channel,
+                check=lambda m: m.author == interaction.user and m.channel == interaction.channel, #(discord.py)
                 # timeout=60.0  # Adjust the timeout as needed
             )
         except asyncio.TimeoutError:
             await interaction.followup.send("Translation request timed out.")
             return
 
-        text_to_translate = response.content
+        text_to_translate = response.content 
         print(f"Received message: {text_to_translate} from {response.author}")
 
         user_id = str(response.author.id)
 
         source_language = text_to_translate.split(" ")[0]
         target_language = text_to_translate.split(" ")[1]
-        text_to_translate = " ".join(text_to_translate.split(" ")[2:])
+        text_to_translate = " ".join(text_to_translate.split(" ")[2:]) #index 2 to end of list
 
         # Call the translate_text function to get the translation
         translated_text = await translate_text(text_to_translate, source_language, target_language, user_id)
@@ -286,13 +282,13 @@ class HelpButtons(discord.ui.View): #HelpButtons class inherits from discord.ui.
 
 ######################### C O N F I G U R A T I O N ###########################
 
-@client.tree.command()
+@client.tree.command() 
 async def botconfig(interaction: discord.Interaction):
     user_id = str(interaction.user.id)
     await interaction.response.send_modal(ConfigBotAIsettings(user_id))
 
 @client.command()
-async def button(ctx):
+async def button(ctx): #ctx = context
     message = await ctx.send("Welcome to the bot!", view=HelpButtons())
     ctx.view.message = message
 
