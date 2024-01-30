@@ -94,6 +94,7 @@ japanese translation does not function very well.
 - `openai`: [OpenAI API Documentation](https://beta.openai.com/docs/)
 - `llama-cpp-python`: [GitHub Repository](https://github.com/openai/llama-cpp-python)
 - `Hugging Face Transformers`: [Hugging Face Transformers Documentation](https://huggingface.co/transformers/)
+- `pytest`: [Documentation](https://docs.python.org/3/library/unittest.html)
 
 --> more in requirements.txt
 
