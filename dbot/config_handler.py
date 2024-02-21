@@ -52,17 +52,3 @@ def save_config(context_id, config):
     with open(config_filename, 'w') as f:
         f.write(json.dumps(config))
     
-
-#write an example usage of the config_handler here
-if __name__ == "__main__":
-        context_id = "123456789"
-        config = get_config(context_id)
-        print(config)
-        config["system_prompt"] = "You are an AI assistant"
-        save_config(context_id, config)
-        config = get_config(context_id)
-        print(config)
-
-
-        #this should print:
-        # {'system_prompt': 'You are an AI assistant', 'max_tokens': 256, 'complete_max_tokens': 512}
